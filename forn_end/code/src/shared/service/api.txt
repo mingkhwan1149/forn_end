@@ -1,0 +1,318 @@
+
+// export const api = {
+//     get: async <T>(url: string, config = {}): Promise<T> => {
+//         try {
+//             const res = await instance.get<T>(url, config);
+//             return res.data;
+//         } catch (err) {
+//             handleError(err);
+//             throw err;
+//         }
+//     },
+
+//     post: async <T>(url: string, data?: any, config = {}): Promise<T> => {
+//         try {
+//             const res = await instance.post<T>(url, data, config);
+//             return res.data;
+//         } catch (err) {
+//             handleError(err);
+//             throw err;
+
+//         }
+//     },
+
+//     put: async <T>(url: string, data?: any, config = {}): Promise<T> => {
+//         try {
+//             const res = await instance.put<T>(url, data, config);
+//             return res.data;
+//         } catch (err) {
+//             handleError(err);
+//             throw err;
+
+//         }
+//     },
+
+//     delete: async <T>(url: string, config = {}): Promise<T> => {
+//         try {
+//             const res = await instance.delete<T>(url, config);
+//             return res.data;
+//         } catch (err) {
+//             handleError(err);
+//             throw err;
+
+//         }
+//     },
+// };
+
+
+// export const api = {
+//   get: async <T>(url: string, config = {}): Promise<T> => {
+//     try {
+//       const res = await instance.get<{ status: any; data: T }>(url, config);
+//       return res.data.data; // ✅ คืนเฉพาะ data
+//     } catch (err) {
+//       handleError(err);
+//       throw err;
+//     }
+//   },
+
+//   post: async <T>(url: string, data?: any, config = {}): Promise<T> => {
+//     try {
+//       const res = await instance.post<{ status: any; data: T }>(url, data, config);
+//       return res.data.data; // ✅ คืนเฉพาะ data
+//     } catch (err) {
+//       handleError(err);
+//       throw err;
+//     }
+//   },
+
+//   put: async <T>(url: string, data?: any, config = {}): Promise<T> => {
+//     try {
+//       const res = await instance.put<{ status: any; data: T }>(url, data, config);
+//       return res.data.data;
+//     } catch (err) {
+//       handleError(err);
+//       throw err;
+//     }
+//   },
+
+//   delete: async <T>(url: string, config = {}): Promise<T> => {
+//     try {
+//       const res = await instance.delete<{ status: any; data: T }>(url, config);
+//       return res.data.data;
+//     } catch (err) {
+//       handleError(err);
+//       throw err;
+//     }
+//   },
+// };
+
+
+// utils/api.ts
+
+
+
+import { alertError } from '../components/swal';
+import axios from 'axios';
+// import { toastError } from '../utils/toast';
+export const HOST_SERVER = `${import.meta.env.VITE_API_DOMAIN}/api`;
+
+const instance = axios.create({
+    baseURL: HOST_SERVER,
+    // headers: { 'Content-Type': 'application/json' },
+});
+
+
+instance.interceptors.request.use(
+  (config) => {
+    // ใส่ header ที่ต้องการ
+    // config.headers["Authorization"] = `Bearer ${localStorage.getItem("token")}`;
+    config.headers["Content-Type"] = "application/json";
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+
+const handleError = (error: any) => {
+    const message =
+        error?.response?.data?.message || error?.message || 'Unknown Error';
+    alertError(message)
+    throw error; // forward to UI
+};
+
+function unwrap<T>(payload: any): T {
+  // รองรับเคสทั่วไปที่ backend ห่อเป็น { status, data }
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return payload.data as T;
+  }
+  // ถ้าเป็น JSON แบน (เช่นอัปโหลดรูป) ก็คืนตรง ๆ
+  return payload as T;
+}
+
+export const api = {
+  get: async <T>(url: string, config = {}): Promise<T> => {
+    try {
+      const res = await instance.get(url, config);
+      return unwrap<T>(res.data);
+    } catch (err) {
+      handleError(err);
+      throw err;
+    }
+  },
+
+  post: async <T>(url: string, data?: any, config = {}): Promise<T> => {
+    try {
+      const res = await instance.post(url, data, config);
+      return unwrap<T>(res.data);
+    } catch (err) {
+      handleError(err);
+      throw err;
+    }
+  },
+
+  put: async <T>(url: string, data?: any, config = {}): Promise<T> => {
+    try {
+      const res = await instance.put(url, data, config);
+      return unwrap<T>(res.data);
+    } catch (err) {
+      handleError(err);
+      throw err;
+    }
+  },
+
+  delete: async <T>(url: string, config = {}): Promise<T> => {
+    try {
+      const res = await instance.delete(url, config);
+      return unwrap<T>(res.data);
+    } catch (err) {
+      handleError(err);
+      throw err;
+    }
+  },
+};
+
+
+
+
+
+  // "scripts": {
+    //     "dev": "vite --mode develop",
+    //     "prod": "vite --mode production",
+    //     "build": "vite build --mode production",
+    //     "build-develop": "vite build --mode develop",
+    //     "lint": "eslint .",
+    //     "preview": "vite preview"
+    // },
+
+
+    import { defineConfig } from "vite"
+import react from "@vitejs/plugin-react"
+import dotenv from "dotenv"
+import svgr from "vite-plugin-svgr"
+
+export default defineConfig(({ mode }) => {
+  const env = dotenv.config({
+    path: mode === "production" ? `../.env.production` : `../.env.develop`,
+  }).parsed
+
+  const envVersion = dotenv.config({
+    path: `../.env.version`,
+  }).parsed
+
+  return {
+    plugins: [react(), svgr()],
+    server: {
+      host: true,
+      port: 3000,
+      allowedHosts: true, // ✅ allow all hosts in dev
+    },
+    preview: {
+      host: true,
+      port: 4173,
+      allowedHosts: true, // ✅ allow all hosts in preview
+    },
+    base: "/",
+    optimizeDeps: {
+      exclude: ["chunk-7OODDWIL", "chunk-U7AYQNQU"],
+    },
+    css: {
+      preprocessorOptions: {
+        scss: {
+          api: "modern-compiler",
+          silenceDeprecations: ["legacy-js-api"],
+        },
+      },
+    },
+    // define: {
+    //   "import.meta.env": {
+    //     ...env,
+    //     ...envVersion,
+    //   },
+    // },
+  }
+})
+
+  "scripts": {
+        "dev": "vite --mode develop",
+        "build:dev": "vite build --mode develop",
+        "preview:dev": "vite preview --mode develop",
+        "build": "vite build --mode production",
+        "preview:prod": "vite preview --mode production",
+        "lint": "eslint ."
+    },
+
+
+"scripts": {
+        "dev": "vite --mode develop",
+        "build:dev": "vite build --mode develop",
+        "preview:dev": "vite preview --mode develop",
+        "build": "vite build --mode production",
+        "preview:prod": "vite preview --mode production",
+        "lint": "eslint .",
+        "preview": "vite preview"
+    },
+
+
+
+    import { defineConfig, loadEnv } from "vite"
+import react from "@vitejs/plugin-react"
+import dotenv from "dotenv"
+import svgr from "vite-plugin-svgr"
+import path from "node:path"
+
+export default defineConfig(({ mode }) => {
+  // const env = dotenv.config({
+  //   path: mode === "production" ? `../.env.production` : `../.env.develop`,
+  // }).parsed
+
+  // const envVersion = dotenv.config({
+  //   path: `../.env.version`,
+  // }).parsed
+  // loadEnv(mode, process.cwd(), "VITE_");
+   loadEnv(mode, path.resolve(process.cwd(), ".."), "VITE_");
+  return {
+    plugins: [react(), svgr()],
+    server: {
+      host: true,
+      port: 3000,
+      allowedHosts: true,
+    },
+    preview: {
+      host: true,
+      port: 4173,
+      allowedHosts: true,
+    },
+    base: "/",
+    optimizeDeps: {
+      exclude: ["chunk-7OODDWIL", "chunk-U7AYQNQU"],
+    },
+    css: {
+      preprocessorOptions: {
+        scss: {
+          api: "modern-compiler",
+          silenceDeprecations: ["legacy-js-api"],
+        },
+      },
+    },
+    // define: {
+    //   "import.meta.env": {
+    //     ...env,
+    //     ...envVersion,
+    //   },
+    // },
+  }
+})
+
+
+ "scripts": {
+        "dev": "vite",
+        "prod": "vite --mode production",
+        "build": "vite build --mode production",
+        "build-develop": "vite build --mode develop",
+        "lint": "eslint .",
+        "preview": "vite preview"
+    },

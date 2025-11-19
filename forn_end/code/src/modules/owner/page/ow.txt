@@ -1,0 +1,340 @@
+import { Autocomplete, Box, Button, Collapse, Fade, Grid, Grow, IconButton, Stack, TextField, Typography } from '@mui/material';
+import React, { useState, type JSX } from 'react';
+import AddIcon from '@mui/icons-material/Add';
+import SearchOrder from '../../../shared/components/search/SearchOrder';
+import { useNavigate } from 'react-router-dom';
+import { useHandleChangeSearch } from '../hook/handleFunction';
+import { useAtom } from 'jotai';
+import { searchStateOwner } from '../hook/Atom';
+import DownloadIcon from '../../../assets/svg/icon/download.svg'
+import ArrowDownloadIcon from '../../../assets/svg/icon/arrow_download.svg'
+import { NumericFormat } from 'react-number-format';
+import { FoodTypeFilter, OwnerTypeFilter, UserTypeFilter, UseStatusFilter } from '../constants/OptionsFilter';
+import type { IFilterOwner } from '../interface/Owner.interface';
+import OwnerTable from './OwnerTable';
+import { useFetchOwner, useFetchOwnerType } from '../hook/useFetchOwner';
+import type { IFilterOwnerType } from '../interface/OwnerType.interface';
+export interface IOwnerListPageProps { };
+
+const OwnerListPage: React.FunctionComponent<IOwnerListPageProps> = props => {
+    const navigator = useNavigate()
+    const [searchState, setSearchState] = useAtom(searchStateOwner);
+    const [showAll, setShowAll] = useState(false);
+    const { owner_type, loading_owner_type } = useFetchOwnerType();
+ const { total_owner } = useFetchOwner();
+    // กำหนดรายการฟิลเตอร์ทั้งหมดที่อยากมี (อยากเพิ่ม/ลดก็แก้ตรงนี้)
+    type FilterKey =
+        | "owner_type_id"
+        | "foofood_type_iddType"
+        | "userType"
+        | "useStatus"
+        | "paymentStatus"
+        | "serviceType"
+        | "pkgMain"
+        | "pkgAddon";
+
+    const FILTERS: { key: FilterKey; label: string }[] = [
+        { key: "owner_type_id", label: "ประเภทร้านค้า" },
+        { key: "food_type_id", label: "ประเภทอาหาร" },
+        { key: "userType", label: "ประเภทผู้ใช้งาน" },
+        { key: "useStatus", label: "สถานะการใช้งาน" },
+        { key: "paymentStatus", label: "สถานะการชำระเงิน" },
+        { key: "serviceType", label: "ประเภทบริการ" },
+        { key: "pkgMain", label: "แพ็คเกจหลัก" },
+        { key: "pkgAddon", label: "แพ็คเกจเสริม" },
+    ];
+    const commonSx = { width: 250, bgcolor: "white" } as const;
+
+    // renderer ของแต่ละ key ( พิมพ์ชนิดตรงกับ options )
+    const filterRenderers: Record<FilterKey, (label: string) => JSX.Element> = {
+        owner_type_id: (label) => (
+            <Autocomplete<IFilterOwnerType>
+                options={owner_type}
+                getOptionLabel={(o) => o.name}
+                isOptionEqualToValue={(o, v) => o.id === v.id}
+                onChange={(_, v) =>
+                    setSearchState((prev) => ({
+                        ...prev,
+                        owner_type_id: v?.id ?? "",   // เก็บ id; ถ้าเคลียร์ให้เป็น ""
+                    }))
+                }
+                renderInput={(p) => <TextField {...p} placeholder={`${label} ทั้งหมด`} />}
+                sx={commonSx}
+            />
+        ),
+        food_type_id: (label) => (
+            <Autocomplete<IFilterOwner>
+                options={FoodTypeFilter}
+                getOptionLabel={(o) => o.label}
+                isOptionEqualToValue={(o, v) => o.code === v.code}
+                renderInput={(p) => <TextField {...p} placeholder={`${label} ทั้งหมด`} />}
+                sx={commonSx}
+            />
+        ),
+        userType: (label) => (
+            <Autocomplete<IFilterOwner>
+                options={UserTypeFilter}
+                renderInput={(p) => <TextField {...p} placeholder={`${label} ทั้งหมด`} />}
+                sx={commonSx}
+            />
+        ),
+        useStatus: (label) => (
+            <Autocomplete<IFilterOwner>
+                options={UseStatusFilter}
+                isOptionEqualToValue={(o, v) => o.code === v.code}
+                renderInput={(p) => <TextField {...p} placeholder={`${label} ทั้งหมด`} />}
+                sx={commonSx}
+            />
+        ),
+        paymentStatus: (label) => (
+            <Autocomplete<string>
+                options={["PAID", "UNPAID", "OVERDUE"]}
+                renderInput={(p) => <TextField {...p} placeholder={`${label} ทั้งหมด`} />}
+                sx={commonSx}
+            />
+        ),
+        serviceType: (label) => (
+            <Autocomplete<string>
+                options={["Dine-in", "Takeaway", "Delivery"]}
+                renderInput={(p) => <TextField {...p} placeholder={`${label} ทั้งหมด`} />}
+                sx={commonSx}
+            />
+        ),
+        pkgMain: (label) => (
+            <Autocomplete<string>
+                options={["Basic", "Pro"]}
+                renderInput={(p) => <TextField {...p} placeholder={`${label} ทั้งหมด`} />}
+                sx={commonSx}
+            />
+        ),
+        pkgAddon: (label) => (
+            <Autocomplete<string>
+                options={["Kitchen", "Barcode", "Loyalty"]}
+                renderInput={(p) => <TextField {...p} placeholder={`${label} ทั้งหมด`} />}
+                sx={commonSx}
+            />
+        ),
+    };
+
+    // renderBox แค่วนเรียก renderer
+    const renderBox = (f: { key: FilterKey; label: string }) => (
+        <Box key={f.key}>{filterRenderers[f.key](f.label)}</Box>
+    );
+
+    const handleCreate = () => {
+        navigator('/owner_management/ow');
+    };
+
+    const { handleChangeSearch } = useHandleChangeSearch(800);
+
+    return (
+        <>
+            <Grid container>
+                <Stack direction="row" spacing={2} alignItems={'center'}>
+                    <Box>
+                        <Typography variant="h5">
+                            {"บัญชีผู้ใช้งาน"}{" "}
+                            <NumericFormat
+                                value={total_owner}
+                                displayType="text"
+                                thousandSeparator
+                            />{" "}
+                            {"รายการ"}
+                        </Typography>
+                    </Box>
+                    <Box>
+                        <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate}>
+                            <Typography variant='button'>
+                                {"สร้างบัญชี"}
+                            </Typography>
+                        </Button>
+                    </Box>
+                    <Box>
+                        <Button variant="contained" sx={{ bgcolor: '#FAFAFA' }}>
+                            <img src={DownloadIcon} />
+                        </Button>
+                    </Box>
+                </Stack>
+            </Grid>
+            <Grid container marginTop={2} >
+                <Grid size={5}>
+                    <SearchOrder searchValue={searchState.owner_search} handleChangeSearch={(e: any) => {
+                        const sear = e.target.value;
+                        console.log('SearchOrder', sear)
+                        handleChangeSearch(sear); // ✅ ใช้งานแบบเดิม
+                    }} />
+                </Grid>
+            </Grid>
+            <Grid container marginTop={2}>
+                <Grid size={10}>
+                    <Grid container spacing={1}>
+                        {FILTERS.map((f, idx) => (
+                            <Grid
+                                size={{ xs: 12, sm: 6, md: 4 }}
+                                key={f.key}
+                                sx={{ display: idx < 3 || showAll ? "block" : "none" }}
+                            >
+                                {/* <Fade in={idx < 3 || showAll} timeout={300} unmountOnExit>
+                                    <Box sx={{ display: idx < 3 || showAll ? "block" : "none" }}>
+                                        {renderBox(f)}
+                                    </Box>
+                                </Fade> */}
+                                <Grow in={idx < 3 || showAll} timeout={200}>
+                                    <Box>{renderBox(f)}</Box>
+                                </Grow>
+                            </Grid>
+                        ))}
+                    </Grid>
+                </Grid>
+
+                <Grid size={2} alignItems={"center"} display="flex" justifyContent="flex-end">
+                    <Button
+                        variant="contained"
+                        sx={{ bgcolor: "#FAFAFA", minWidth: 48, p: 1 }}
+                        onClick={() => setShowAll((v) => !v)}
+                        aria-expanded={showAll}
+                        aria-label={showAll ? "ซ่อนฟิลเตอร์" : "แสดงฟิลเตอร์ทั้งหมด"}
+                    >
+                        <img
+                            src={ArrowDownloadIcon}
+                            style={{
+                                transition: "transform 0.2s ease",
+                                transform: showAll ? "rotate(180deg)" : "rotate(0deg)",
+                            }}
+                        />
+                    </Button>
+                </Grid>
+            </Grid>
+            <Grid container marginTop={2}>
+                <OwnerTable />
+            </Grid>
+        </>
+    )
+};
+
+export default OwnerListPage;
+
+
+import { Box, Button, Grid, Grow, Stack, Typography } from '@mui/material';
+import React, { useState } from 'react';
+import AddIcon from '@mui/icons-material/Add';
+import SearchOrder from '../../../shared/components/search/SearchOrder';
+import { useNavigate } from 'react-router-dom';
+import { handleCreate, useHandleChangeSearch } from '../hook/handleFunction';
+import { useAtom } from 'jotai';
+import { searchStateOwner } from '../hook/Atom';
+import DownloadIcon from '../../../assets/svg/icon/download.svg'
+import ArrowDownloadIcon from '../../../assets/svg/icon/arrow_download.svg'
+import { NumericFormat } from 'react-number-format';
+import OwnerTable from './OwnerTable';
+import { useFetchOwner } from '../hook/useFetchOwner';
+import { useOwnerFilterRenderers } from '../components/Filter/OwnerFilter';
+import PopupConfirm from '../../../shared/components/popup/PopupConfirm';
+import { TextPopupDefault, type ITextPopup } from '../../../shared/components/popup/PopupConfirm.interface';
+export interface IOwnerListPageProps { };
+
+const OwnerListPage: React.FunctionComponent<IOwnerListPageProps> = props => {
+    const navigate = useNavigate()
+    const [searchState] = useAtom(searchStateOwner);
+    const [showAll, setShowAll] = useState(false);
+    const { owner, total_owner, loading_owner, reload } = useFetchOwner();
+    const { FILTERS, renderBox } = useOwnerFilterRenderers();
+    const { handleChangeSearch } = useHandleChangeSearch(800);
+    const [dataSubmitted, setDataSubmitted] = useState(false);
+    const [textPopup, setTextPopup] = useState<ITextPopup>(TextPopupDefault);
+
+    return (
+        <>
+            <PopupConfirm open={dataSubmitted} popupValue={textPopup} />
+            <Grid container>
+
+                <Stack direction="row" spacing={2} alignItems={'center'}>
+                    <Box>
+                        <Typography variant="h5">
+                            {"บัญชีผู้ใช้งาน"}{" "}
+                            <NumericFormat
+                                value={total_owner}
+                                displayType="text"
+                                thousandSeparator
+                            />{" "}
+                            {"รายการ"}
+                        </Typography>
+                    </Box>
+                    <Box>
+                        <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleCreate(navigate)}>
+                            <Typography variant='button'>
+                                {"สร้างบัญชี"}
+                            </Typography>
+                        </Button>
+                    </Box>
+                    <Box>
+                        <Button variant="contained" sx={{ bgcolor: '#FAFAFA' }}>
+                            <img src={DownloadIcon} />
+                        </Button>
+                    </Box>
+                </Stack>
+            </Grid>
+            <Grid container marginTop={2} >
+                <Grid size={5}>
+                    <SearchOrder searchValue={searchState.owner_search} handleChangeSearch={(e: any) => {
+                        const sear = e.target.value;
+                        console.log('SearchOrder', sear)
+                        handleChangeSearch(sear); // ✅ ใช้งานแบบเดิม
+                    }} />
+                </Grid>
+            </Grid>
+            <Grid container marginTop={2}>
+                <Grid size={10}>
+                    <Grid container spacing={1}>
+                        {FILTERS.map((f, idx) => (
+                            <Grid
+                                size={{ xs: 12, sm: 6, md: 4 }}
+                                key={f.key}
+                                sx={{ display: idx < 3 || showAll ? "block" : "none" }}
+                            >
+                                {/* <Fade in={idx < 3 || showAll} timeout={300} unmountOnExit>
+                                    <Box sx={{ display: idx < 3 || showAll ? "block" : "none" }}>
+                                        {renderBox(f)}
+                                    </Box>
+                                </Fade> */}
+                                <Grow in={idx < 3 || showAll} timeout={200}>
+                                    <Box>{renderBox(f)}</Box>
+                                </Grow>
+                            </Grid>
+                        ))}
+                    </Grid>
+                </Grid>
+
+                {/* <Grid size={2} alignItems={"center"} display="flex" justifyContent="flex-end">
+                    <Button
+                        variant="contained"
+                        sx={{ bgcolor: "#FAFAFA", minWidth: 48, p: 1 }}
+                        onClick={() => setShowAll((v) => !v)}
+                        aria-expanded={showAll}
+                        aria-label={showAll ? "ซ่อนฟิลเตอร์" : "แสดงฟิลเตอร์ทั้งหมด"}
+                    >
+                        <img
+                            src={ArrowDownloadIcon}
+                            style={{
+                                transition: "transform 0.2s ease",
+                                transform: showAll ? "rotate(180deg)" : "rotate(0deg)",
+                            }}
+                        />
+                    </Button>
+                </Grid> */}
+            </Grid>
+            <Grid container marginTop={2}>
+                <OwnerTable
+                    owner={owner}
+                    loading_owner={loading_owner}
+                    setDataSubmitted={setDataSubmitted}
+                    setTextPopup={setTextPopup}
+                    reload={reload}
+                    total_owner={total_owner}
+                />
+            </Grid>
+        </>
+    )
+};
+
+export default OwnerListPage;
